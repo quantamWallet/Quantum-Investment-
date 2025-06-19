@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Referral</title>
+  <style>
+    body {
+      font-family: Arial;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    .box {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 15px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h2>👥 Your Referral Link</h2>
+  <div class="box">
+    <input type="text" id="refLink" readonly />
+    <button onclick="copyToClipboard()">📋 Copy Link</button>
+  </div>
+
+  <h3>💰 Referral Bonuses</h3>
+  <ul id="referrals">Loading...</ul>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCCW4G9JlVu_xb0bGjlKmsi5mdqXSwvFak",
+      authDomain: "quantum-rio.firebaseapp.com",
+      projectId: "quantum-rio",
+      storageBucket: "quantum-rio.appspot.com",
+      messagingSenderId: "805433999377",
+      appId: "1:805433999377:web:d0efa8c46ec4a0fa30f1b0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const refInput = document.getElementById("refLink");
+    const list = document.getElementById("referrals");
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        refInput.value = "Please login to view your referral link.";
+        return;
+      }
+
+      const link = `${window.location.origin}/register.html?ref=${user.uid}`;
+      refInput.value = link;
+
+      // Load referrals
+      const q = query(collection(db, "referrals"), where("referrer", "==", user.uid));
+      const snap = await getDocs(q);
+      let html = "";
+
+      snap.forEach(doc => {
+        const data = doc.data();
+        html += `<li>${data.email} - ${data.bonus || 0} KES</li>`;
+      });
+
+      list.innerHTML = html || "<li>No referrals yet.</li>";
+    });
+  </script>
+
+  <script>
+    function copyToClipboard() {
+      const link = document.getElementById("refLink").value;
+      navigator.clipboard.writeText(link)
+        .then(() => alert("Referral link copied to clipboard!"))
+        .catch(() => alert("Failed to copy link."));
+    }
+  </script>
+</body>
+</html>

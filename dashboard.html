@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quantum Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter', sans-serif; }
+    body { background:#F2F5FA; padding:16px; }
+    .container { max-width:480px; margin:auto; }
+    .banner {
+      background:#fff; border-radius:16px; padding:20px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.05);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .banner .greeting { font-size:18px; font-weight:600; }
+    .banner .icon { font-size:24px; }
+
+    .stats {
+      display:grid; grid-template-columns:1fr 1fr; gap:12px;
+      margin:20px 0;
+    }
+    .card {
+      background:#fff; border-radius:16px; padding:16px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.06);
+    }
+    .card h4 { font-size:16px; color:#555; }
+    .card p { font-size:20px; font-weight:600; color:#111; margin-top:8px; }
+
+    .ticker {
+      background:#fff; border-radius:16px; padding:16px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.06);
+      margin-bottom:20px;
+    }
+    .ticker div { margin-bottom:8px; font-size:14px; }
+
+    .nav {
+      display:flex; flex-wrap: wrap; gap:10px; margin-bottom:20px;
+    }
+    .nav a button {
+      flex:1 1 30%; padding:12px;
+      background:#0366D6; color:#fff; border:none; border-radius:12px;
+      font-weight:600; cursor:pointer;
+    }
+
+    .logout {
+      width:100%; padding:14px;
+      background:#E53E3E; color:#fff; border:none; border-radius:12px;
+      font-weight:600; margin-bottom:20px; cursor:pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="banner">
+      <div class="greeting">Welcome, Investor</div>
+      <div class="icon">👋</div>
+    </div>
+
+    <div class="stats">
+      <div class="card">
+        <h4>Total Balance</h4>
+        <p><span id="totalBalance">--</span> KES</p>
+      </div>
+      <div class="card">
+        <h4>Total Profit</h4>
+        <p><span id="totalProfit">--</span> KES</p>
+      </div>
+      <div class="card">
+        <h4>Active Investments</h4>
+        <p><span id="activeCount">--</span></p>
+      </div>
+      <div class="card">
+        <h4>Matured Investments</h4>
+        <p><span id="maturedCount">--</span></p>
+      </div>
+    </div>
+
+    <div class="ticker">
+      <div>BTC/USD: <span id="btcPrice">--</span></div>
+      <div>ETH/USD: <span id="ethPrice">--</span></div>
+      <div>Gold: <span id="goldPrice">--</span></div>
+      <div>USD/KES: <span id="usdKesh">--</span></div>
+    </div>
+
+    <div class="nav">
+      <a href="wallet.html"><button>Wallet</button></a>
+      <a href="investment.html"><button>Invest</button></a>
+      <a href="referral.html"><button>Referral</button></a>
+      <a href="support.html"><button>Support</button></a>
+      <a href="profile.html"><button>Profile</button></a>
+      <a href="about.html"><button>About</button></a>
+    </div>
+
+    <button class="logout" onclick="logout()">Logout</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    const config = {
+      apiKey: "AIzaSyCCW4G9JlVu_xb0bGjlKmsi5mdqXSwvFak",
+      authDomain: "quantum-rio.firebaseapp.com",
+      projectId: "quantum-rio",
+      storageBucket: "quantum-rio.appspot.com",
+      messagingSenderId: "805433999377",
+      appId: "1:805433999377:web:d0efa8c46ec4a0fa30f1b0"
+    };
+    const app = initializeApp(config);
+    const auth = getAuth(app), db = getFirestore(app);
+
+    function logout() {
+      signOut(auth).then(() => window.location.href = "index.html");
+    }
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) return window.location.href = "index.html";
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      const data = userDoc.data() || {};
+      document.getElementById("totalBalance").innerText = data.balance || 0;
+
+      const invSnap = await getDocs(collection(db, "users", user.uid, "investments"));
+      let profit = 0, active = 0, matured = 0;
+      const now = Date.now();
+      invSnap.forEach(d => {
+        const inv = d.data();
+        const end = inv.timestamp + 24 * 60 * 60 * 1000;
+        if (now < end) active++;
+        else {
+          matured++;
+          profit += (inv.roi - inv.amount);
+        }
+      });
+      document.getElementById("totalProfit").innerText = profit;
+      document.getElementById("activeCount").innerText = active;
+      document.getElementById("maturedCount").innerText = matured;
+    });
+
+    async function loadPrices() {
+      // Static placeholders (use real API if needed)
+      document.getElementById("btcPrice").innerText = "$66,500";
+      document.getElementById("ethPrice").innerText = "$3,200";
+      document.getElementById("goldPrice").innerText = "$2,340";
+      document.getElementById("usdKesh").innerText = "KES 138.50";
+    }
+    loadPrices();
+  </script>
+</body>
+</html>

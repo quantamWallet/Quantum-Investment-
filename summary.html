@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Market Summary</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    h2 { text-align: center; }
+    .price-box {
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 10px auto;
+      width: 90%;
+      max-width: 400px;
+      background: #f4f4f4;
+      text-align: center;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 20px auto;
+      display: block;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h2>Live Market Prices</h2>
+
+  <div class="price-box" id="btcPrice">BTC/USD: Loading...</div>
+  <div class="price-box" id="ethPrice">ETH/USD: Loading...</div>
+  <div class="price-box" id="goldPrice">Gold (XAU/USD): Loading...</div>
+  <div class="price-box" id="usdKes">USD/KES: Loading...</div>
+
+  <button onclick="loadPrices()">Refresh Prices</button>
+
+  <script>
+    async function loadPrices() {
+      try {
+        const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd");
+        const data = await response.json();
+        document.getElementById("btcPrice").innerText = "BTC/USD: $" + data.bitcoin.usd.toLocaleString();
+        document.getElementById("ethPrice").innerText = "ETH/USD: $" + data.ethereum.usd.toLocaleString();
+
+        const forex = await fetch("https://api.exchangerate.host/latest?base=USD&symbols=KES");
+        const forexData = await forex.json();
+        document.getElementById("usdKes").innerText = "USD/KES: " + forexData.rates.KES.toFixed(2);
+
+        const gold = await fetch("https://api.metals.live/v1/spot");
+        const goldData = await gold.json();
+        document.getElementById("goldPrice").innerText = "Gold (XAU/USD): $" + goldData[0].gold.toLocaleString();
+      } catch (e) {
+        alert("Error fetching prices. Try again.");
+        console.error(e);
+      }
+    }
+
+    // Load prices on page load
+    loadPrices();
+  </script>
+</body>
+</html>

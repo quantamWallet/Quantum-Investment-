@@ -1,0 +1,76 @@
+<!DOCTYPE html><html>
+<head>
+  <title>Notifications</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+    .notification {
+      background: white;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h2>🔔 Notifications</h2>
+  <div id="notificationList">Loading...</div>  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { getFirestore, collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCCW4G9JlVu_xb0bGjlKmsi5mdqXSwvFak",
+      authDomain: "quantum-rio.firebaseapp.com",
+      projectId: "quantum-rio",
+      storageBucket: "quantum-rio.appspot.com",
+      messagingSenderId: "805433999377",
+      appId: "1:805433999377:web:d0efa8c46ec4a0fa30f1b0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const list = document.getElementById("notificationList");
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        list.innerHTML = "<p>Please log in to view notifications.</p>";
+        return;
+      }
+
+      try {
+        const q = query(collection(db, "notifications"), orderBy("timestamp", "desc"));
+        const snap = await getDocs(q);
+
+        let output = "";
+        snap.forEach(doc => {
+          const n = doc.data();
+          if (!n.target || n.target === user.uid) {
+            const date = n.timestamp?.toDate();
+            const formattedDate = date ? new Date(date).toLocaleString() : "";
+            output += `
+              <div class="notification">
+                <p>${n.message}</p>
+                <small>${formattedDate}</small>
+              </div>
+            `;
+          }
+        });
+
+        list.innerHTML = output || "<p>No notifications available.</p>";
+      } catch (error) {
+        console.error("Error loading notifications:", error);
+        list.innerHTML = "<p>Failed to load notifications.</p>";
+      }
+    });
+  </script></body>
+</html>

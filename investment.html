@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Investment Plans</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f1f4f9;
+    }
+    .plan {
+      background: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 15px 0;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .plan h3 {
+      margin-top: 0;
+    }
+    .plan button {
+      background: #0a7cff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin-top: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .notification {
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+  </style>
+</head>
+<body>
+
+<h2>📈 Available Investment Plans</h2>
+<div id="notification"></div>
+
+<div id="plansContainer"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCCW4G9JlVu_xb0bGjlKmsi5mdqXSwvFak",
+    authDomain: "quantum-rio.firebaseapp.com",
+    projectId: "quantum-rio",
+    storageBucket: "quantum-rio.appspot.com",
+    messagingSenderId: "805433999377",
+    appId: "1:805433999377:web:d0efa8c46ec4a0fa30f1b0"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const plans = [
+    { title: "Starter Plan", amount: 35000, roi: 70000, percent: 100 },
+    { title: "Bronze Plan", amount: 50000, roi: 100000, percent: 100 },
+    { title: "Silver Plan", amount: 75000, roi: 150000, percent: 100 },
+    { title: "Gold Plan", amount: 100000, roi: 200000, percent: 100 },
+    { title: "Platinum Plan", amount: 150000, roi: 300000, percent: 100 },
+    { title: "Diamond Plan", amount: 200000, roi: 400000, percent: 100 },
+    { title: "Elite Plan", amount: 250000, roi: 500000, percent: 100 },
+    { title: "Titan Plan", amount: 300000, roi: 600000, percent: 100 },
+    { title: "Mega Plan", amount: 350000, roi: 700000, percent: 100 },
+    { title: "Ultra Plan", amount: 400000, roi: 800000, percent: 100 },
+    { title: "Supreme Plan", amount: 450000, roi: 900000, percent: 100 },
+    { title: "VIP Plan", amount: 500000, roi: 1000000, percent: 100 }
+  ];
+
+  const plansContainer = document.getElementById("plansContainer");
+  const notification = document.getElementById("notification");
+
+  function showMessage(msg, type = "success") {
+    notification.innerHTML = `<div class="notification ${type}">${msg}</div>`;
+    setTimeout(() => (notification.innerHTML = ""), 4000);
+  }
+
+  let currentUser, currentBalance;
+
+  onAuthStateChanged(auth, async user => {
+    if (user) {
+      currentUser = user;
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        currentBalance = userSnap.data().balance || 0;
+        renderPlans();
+      }
+    } else {
+      window.location.href = "index.html";
+    }
+  });
+
+  function renderPlans() {
+    plansContainer.innerHTML = "";
+    plans.forEach(plan => {
+      const div = document.createElement("div");
+      div.className = "plan";
+      div.innerHTML = `
+        <h3>💼 ${plan.title}</h3>
+        <p>💰 Amount: ${plan.amount.toLocaleString()} KES</p>
+        <p>🎯 Expected ROI: ${plan.roi.toLocaleString()} KES (${plan.percent}%)</p>
+        <button onclick="invest(${plan.amount}, ${plan.roi})">Invest Now</button>
+      `;
+      plansContainer.appendChild(div);
+    });
+  }
+
+  window.invest = async (amount, roi) => {
+    if (currentBalance >= amount) {
+      const newBalance = currentBalance - amount;
+      await updateDoc(doc(db, "users", currentUser.uid), { balance: newBalance });
+
+      await addDoc(collection(db, "users", currentUser.uid, "investments"), {
+        amount,
+        roi,
+        timestamp: Date.now(),
+        status: "active",
+        createdAt: serverTimestamp()
+      });
+
+      currentBalance = newBalance;
+      showMessage(`You have successfully invested ${amount.toLocaleString()} KES`, "success");
+    } else {
+      showMessage("Insufficient balance to invest.", "error");
+    }
+  };
+</script>
+</body>
+</html>

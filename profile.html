@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Profile</title>
+  <style>
+    body {
+      font-family: Arial;
+      padding: 20px;
+      background: #f0f0f0;
+    }
+
+    .box {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.1);
+    }
+
+    .log {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      background-color: #4CAF50;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>👤 My Profile</h2>
+
+  <div class="box">
+    <p><strong>Email:</strong> <span id="userEmail">Loading...</span></p>
+    <p><strong>Balance:</strong> <span id="userBalance">Loading...</span> KES</p>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <div class="box">
+    <h3>🕒 Recent Activity</h3>
+    <div id="activityLogs">Loading...</div>
+  </div>
+
+  <!-- Firebase scripts -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import {
+      getAuth, onAuthStateChanged, signOut
+    } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, collection, addDoc, orderBy, query, getDocs
+    } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCCW4G9JlVu_xb0bGjlKmsi5mdqXSwvFak",
+      authDomain: "quantum-rio.firebaseapp.com",
+      projectId: "quantum-rio",
+      storageBucket: "quantum-rio.appspot.com",
+      messagingSenderId: "805433999377",
+      appId: "1:805433999377:web:d0efa8c46ec4a0fa30f1b0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    function logout() {
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
+      });
+    }
+
+    async function logActivity(uid, description) {
+      await addDoc(collection(db, "users", uid, "activityLogs"), {
+        description,
+        timestamp: Date.now()
+      });
+    }
+
+    async function loadActivityLogs(uid) {
+      const logsContainer = document.getElementById("activityLogs");
+      logsContainer.innerHTML = "Loading...";
+
+      const q = query(collection(db, "users", uid, "activityLogs"), orderBy("timestamp", "desc"));
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        logsContainer.innerHTML = "<p>No activity logs yet.</p>";
+        return;
+      }
+
+      logsContainer.innerHTML = "";
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const date = new Date(data.timestamp).toLocaleString();
+        const div = document.createElement("div");
+        div.className = "log";
+        div.innerHTML = `<strong>${data.description}</strong><br><small>${date}</small>`;
+        logsContainer.appendChild(div);
+      });
+    }
+
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const userData = docSnap.data();
+          document.getElementById("userEmail").innerText = user.email;
+          document.getElementById("userBalance").innerText = userData.balance || 0;
+
+          // Load activity logs
+          await loadActivityLogs(user.uid);
+
+          // Optional: Log that profile was viewed
+          await logActivity(user.uid, "Viewed Profile Page");
+        }
+      } else {
+        window.location.href = "index.html";
+      }
+    });
+  </script>
+</body>
+</html>

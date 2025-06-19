@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Wallet</title>
+  <style>
+    body {
+      font-family: Arial;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    .box {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 10px;
+      width: 100%;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    h2 {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>💼 Wallet</h2>
+
+  <div class="box">
+    <p><strong>Current Balance:</strong> <span id="userBalance">Loading...</span> KES</p>
+  </div>
+
+  <div class="box">
+    <h3>💳 Deposit</h3>
+    <form id="depositForm">
+      <input type="number" id="depositAmount" placeholder="Enter amount to deposit" required />
+      <button type="submit">Deposit</button>
+    </form>
+  </div>
+
+  <div class="box">
+    <h3>💸 Withdraw</h3>
+    <form id="withdrawForm">
+      <input type="number" id="withdrawAmount" placeholder="Enter amount to withdraw" required />
+      <button type="submit">Withdraw</button>
+    </form>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCCW4G9JlVu_xb0bGjlKmsi5mdqXSwvFak",
+      authDomain: "quantum-rio.firebaseapp.com",
+      projectId: "quantum-rio",
+      storageBucket: "quantum-rio.appspot.com",
+      messagingSenderId: "805433999377",
+      appId: "1:805433999377:web:d0efa8c46ec4a0fa30f1b0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const userBalance = document.getElementById("userBalance");
+
+    let currentUser;
+    let currentBalance = 0;
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        alert("Please login first.");
+        window.location.href = "index.html";
+        return;
+      }
+
+      currentUser = user;
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      currentBalance = userSnap.data()?.balance || 0;
+      userBalance.innerText = currentBalance;
+    });
+
+    // Deposit Handler
+    document.getElementById("depositForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById("depositAmount").value);
+      if (!currentUser || isNaN(amount) || amount <= 0) return alert("Invalid deposit amount.");
+
+      const userRef = doc(db, "users", currentUser.uid);
+      const newBalance = currentBalance + amount;
+
+      await updateDoc(userRef, { balance: newBalance });
+
+      currentBalance = newBalance;
+      userBalance.innerText = currentBalance;
+      alert("Deposit successful.");
+      document.getElementById("depositForm").reset();
+    });
+
+    // Withdraw Handler (with deduction)
+    document.getElementById("withdrawForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById("withdrawAmount").value);
+      if (!currentUser || isNaN(amount) || amount <= 0) return alert("Invalid withdrawal amount.");
+
+      if (amount > currentBalance) {
+        alert("Insufficient balance.");
+        return;
+      }
+
+      const userRef = doc(db, "users", currentUser.uid);
+      const newBalance = currentBalance - amount;
+
+      await updateDoc(userRef, { balance: newBalance });
+
+      currentBalance = newBalance;
+      userBalance.innerText = currentBalance;
+
+      await addDoc(collection(db, "withdrawals"), {
+        uid: currentUser.uid,
+        email: currentUser.email,
+        amount,
+        status: "pending",
+        timestamp: serverTimestamp()
+      });
+
+      alert("Your withdrawal request has been sent.");
+      document.getElementById("withdrawForm").reset();
+    });
+  </script>
+</body>
+</html>
